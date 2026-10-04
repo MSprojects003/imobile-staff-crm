@@ -1,19 +1,27 @@
-import { Button } from "@/components/ui/button"
+import { redirect } from "next/navigation"
 
-export default function Page() {
+import { AppSidebar } from "@/components/custom/dashboard/app-sidebar"
+import { getCurrentUser } from "@/lib/auth"
+
+export const dynamic = "force-dynamic"
+
+export default async function Page() {
+  const user = await getCurrentUser()
+
+  if (!user) {
+    redirect("/login")
+  }
+
   return (
-    <div className="flex min-h-svh p-6">
-      <div className="flex max-w-md min-w-0 flex-col gap-4 text-sm leading-loose">
-        <div>
-          <h1 className="font-medium">Project ready!</h1>
-          <p>You may now add components and start building.</p>
-          <p>We&apos;ve already added the button component for you.</p>
-          <Button className="mt-2">Button</Button>
-        </div>
-        <div className="font-mono text-xs text-muted-foreground">
-          (Press <kbd>d</kbd> to toggle dark mode)
-        </div>
+    <AppSidebar user={user}>
+      <div className="mx-auto w-full max-w-[1500px]">
+        <h1 className="text-2xl font-bold tracking-tight text-[#192d4a] sm:text-3xl">
+          Dashboard
+        </h1>
+        <p className="mt-1 text-sm text-[#7a8490]">
+          Overview of your daily performance
+        </p>
       </div>
-    </div>
+    </AppSidebar>
   )
 }
