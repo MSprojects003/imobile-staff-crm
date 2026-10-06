@@ -2,6 +2,8 @@ import { Geist, Geist_Mono } from "next/font/google"
 
 import "./globals.css"
 import { cn } from "@/lib/utils";
+import { QueryProvider } from "@/components/providers/query-provider"
+import { CartProvider } from "@/components/providers/cart-provider"
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'})
 
@@ -22,7 +24,9 @@ export default function RootLayout({
       className={cn("antialiased", fontMono.variable, "font-sans", geist.variable)}
     >
       <body>
-        {children}
+        <QueryProvider>
+          <CartProvider>{children}</CartProvider>
+        </QueryProvider>
       </body>
     </html>
   )

@@ -5,6 +5,9 @@ import * as React from "react"
 import { Search } from "lucide-react"
 
 import { Input } from "@/components/ui/input"
+import { Skeleton } from "@/components/ui/skeleton"
+import { useActiveProducts } from "@/lib/api/products-client"
+import { getProductPrice } from "@/lib/api/product-utils"
 import {
   Sheet,
   SheetContent,
@@ -15,34 +18,7 @@ import {
 } from "@/components/ui/sheet"
 
 const inputClassName =
-  "h-10 rounded-lg border-[#edf0f2] bg-[#f8fafb] pl-9 text-sm text-[#192d4a] placeholder:text-[#9aa7b2] focus-visible:border-[#e7242b] focus-visible:ring-[#e7242b]/15"
-
-const products = [
-  {
-    id: 1,
-    name: "iPhone 15 Pro",
-    price: "Rs. 289,900",
-    image: "/assets/phones-banner.png",
-  },
-  {
-    id: 2,
-    name: "Samsung Galaxy S24",
-    price: "Rs. 249,900",
-    image: "/assets/phones-banner.png",
-  },
-  {
-    id: 3,
-    name: "Google Pixel 9",
-    price: "Rs. 219,900",
-    image: "/assets/phones-banner.png",
-  },
-  {
-    id: 4,
-    name: "AirPods Pro",
-    price: "Rs. 79,900",
-    image: "/assets/phones-banner.png",
-  },
-]
+  "h-10 rounded-lg border-[#c7d0d9] bg-white pl-9 text-sm text-[#192d4a] shadow-[0_1px_2px_rgba(25,45,74,0.04)] placeholder:text-[#8997a5] hover:border-[#aebbc8] focus-visible:border-[#e7242b] focus-visible:ring-[#e7242b]/15"
 
 function SearchInput({
   value,
@@ -72,21 +48,41 @@ function ProductResults({
   query: string
   className?: string
 }) {
+  const { data: products, isLoading, isError } = useActiveProducts()
   const normalizedQuery = query.trim().toLowerCase()
 
   if (!normalizedQuery) {
     return null
   }
 
-  const matches = products.filter((product) =>
-    product.name.toLowerCase().includes(normalizedQuery)
-  )
+  const matches =
+    products?.filter((product) =>
+      `${product.name} ${product.brand} ${product.sku}`
+        .toLowerCase()
+        .includes(normalizedQuery)
+    ) ?? []
 
   return (
     <div
       className={`mt-2 overflow-hidden rounded-lg border border-[#edf0f2] bg-white shadow-lg ${className ?? ""}`}
     >
-      {matches.length > 0 ? (
+      {isLoading ? (
+        <div className="space-y-3 p-3">
+          {Array.from({ length: 3 }, (_, index) => (
+            <div key={index} className="flex items-center gap-3">
+              <Skeleton className="size-10 rounded-md" />
+              <div className="min-w-0 flex-1 space-y-2">
+                <Skeleton className="h-3 w-3/4" />
+                <Skeleton className="h-3 w-1/3" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : isError ? (
+        <p className="px-3 py-4 text-center text-sm text-[#c51e27]">
+          Unable to load products.
+        </p>
+      ) : matches.length > 0 ? (
         <div className="divide-y divide-[#f0f2f4]">
           {matches.map((product) => (
             <button
@@ -95,10 +91,11 @@ function ProductResults({
               className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition hover:bg-[#fff8f8]"
             >
               <Image
-                src={product.image}
+                src={product.images[0] ?? "/assets/phones-banner.png"}
                 alt=""
                 width={42}
                 height={42}
+                unoptimized
                 className="size-10 rounded-md bg-[#f8fafb] object-cover"
               />
               <span className="min-w-0">
@@ -106,7 +103,7 @@ function ProductResults({
                   {product.name}
                 </span>
                 <span className="mt-0.5 block text-xs font-semibold text-[#e7242b]">
-                  {product.price}
+                  {getProductPrice(product)}
                 </span>
               </span>
             </button>

@@ -1,7 +1,14 @@
 "use client"
 
 import { useState } from "react"
-import { Bell, ChevronUp, CircleUserRound, LogOut } from "lucide-react"
+import {
+  Bell,
+  ChevronUp,
+  ChevronDown,
+  CircleUserRound,
+  EllipsisVertical,
+  LogOut,
+} from "lucide-react"
 import { useRouter } from "next/navigation"
 
 import {
@@ -44,13 +51,13 @@ export function ProfilePopover({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        className="flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left transition outline-none hover:bg-[#f8fafb] focus-visible:ring-2 focus-visible:ring-[#e7242b]/20"
+        className="flex w-full items-center gap-3 rounded-xl bg-[#f8fafb] px-2 py-2 text-left transition outline-none hover:bg-[#f1f4f6] focus-visible:ring-2 focus-visible:ring-[#e7242b]/20 group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:rounded-lg group-data-[collapsible=icon]:p-0"
         aria-label="Open account menu"
       >
-        <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#ffe0e1] text-sm font-bold text-[#e7242b]">
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#ffe0e1] text-sm font-bold text-[#e7242b] group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:text-xs">
           {initials}
         </div>
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
           <div className="flex items-center gap-2">
             <p className="truncate text-sm font-semibold text-[#192d4a]">
               {fullName}
@@ -61,7 +68,12 @@ export function ProfilePopover({
           </div>
           <p className="truncate text-xs text-[#7a8490]">{phone}</p>
         </div>
-        <ChevronUp className="size-4 shrink-0 text-[#7a8490]" />
+        <span className="flex shrink-0 flex-col items-center justify-center -space-y-1 text-[#7a8490] group-data-[collapsible=icon]:hidden">
+          <ChevronUp className="size-3.5" />
+          <ChevronDown className="size-3.5" />
+        </span>
+
+        <EllipsisVertical className="hidden size-4 shrink-0 text-[#7a8490] group-data-[collapsible=icon]:block" />
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"

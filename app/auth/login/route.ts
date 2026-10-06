@@ -2,6 +2,7 @@ import { createHmac, randomInt } from "node:crypto"
 import { NextResponse } from "next/server"
 
 import { getStaffAuthPassword } from "@/lib/auth-credentials"
+import { sendNotifySms } from "@/lib/notify-lk"
 import { createSupabaseAdminClient } from "@/lib/supabase/admin"
 import { setPendingAuth } from "@/lib/pending-auth"
 
@@ -15,40 +16,10 @@ function normalizePhone(value: string) {
 }
 
 async function sendNotifyOtp(phone: string, code: string) {
-  const { NOTIFY_LK_API_KEY, NOTIFY_LK_USER_ID, NOTIFY_LK_SENDER_ID } =
-    process.env
-
-  if (!NOTIFY_LK_API_KEY || !NOTIFY_LK_USER_ID || !NOTIFY_LK_SENDER_ID) {
-    throw new Error("Notify.lk is not configured.")
-  }
-
-  const response = await fetch("https://app.notify.lk/api/v1/send", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      user_id: NOTIFY_LK_USER_ID,
-      api_key: NOTIFY_LK_API_KEY,
-      sender_id: NOTIFY_LK_SENDER_ID,
-      to: phone.replace(/\D/g, ""),
-      message: `Your iMobile verification code is ${code}. It expires in 5 minutes.`,
-    }),
-    cache: "no-store",
-  })
-
-  const responseText = await response.text()
-  let result: { status?: string } | null = null
-  try {
-    result = JSON.parse(responseText) as { status?: string }
-  } catch {
-    // Notify.lk may return plain text for a successful request.
-  }
-
-  if (
-    !response.ok ||
-    (result?.status && result.status.toLowerCase() !== "success")
-  ) {
-    throw new Error("Notify.lk could not send the verification code.")
-  }
+  await sendNotifySms(
+    phone,
+    `Your iMobile verification code is ${code}. It expires in 5 minutes.`
+  )
 }
 
 export async function POST(request: Request) {
