@@ -1,6 +1,41 @@
 -- Shop creation, admin notification/SMS logging, and private Realtime broadcasts.
 -- Run this script in the Supabase SQL Editor before using shop creation.
 
+alter table public.notifications
+  add column if not exists read_at timestamptz;
+
+create or replace function public.set_notification_read_at()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  if new.is_read then
+    if tg_op = 'INSERT' then
+      new.read_at := coalesce(new.read_at, now());
+    elsif new.is_read is distinct from old.is_read or old.read_at is null then
+      new.read_at := now();
+    end if;
+  else
+    new.read_at := null;
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists set_notification_read_at
+  on public.notifications;
+create trigger set_notification_read_at
+  before insert or update on public.notifications
+  for each row
+  execute function public.set_notification_read_at();
+
+update public.notifications
+set read_at = now()
+where is_read = true
+  and read_at is null;
+
 drop function if exists public.create_shop_with_broadcast(
   character varying,
   character varying,

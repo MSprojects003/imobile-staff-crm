@@ -14,6 +14,8 @@ type FooterPaginationProps = {
   pageSize: number
   hideAtBottom?: boolean
   className?: string
+  itemLabel?: string
+  ariaLabel?: string
 }
 
 export function FooterPagination({
@@ -23,6 +25,8 @@ export function FooterPagination({
   pageSize,
   hideAtBottom = true,
   className,
+  itemLabel = "products",
+  ariaLabel = "Product pages",
 }: FooterPaginationProps) {
   const router = useRouter()
   const pathname = usePathname()
@@ -31,8 +35,7 @@ export function FooterPagination({
 
   useEffect(() => {
     const updateScrollState = () => {
-      const { scrollTop, scrollHeight, clientHeight } =
-        document.documentElement
+      const { scrollTop, scrollHeight, clientHeight } = document.documentElement
       setIsAtBottom(scrollTop + clientHeight >= scrollHeight - 4)
     }
 
@@ -57,9 +60,9 @@ export function FooterPagination({
 
   return (
     <nav
-      aria-label="Product pages"
+      aria-label={ariaLabel}
       className={cn(
-        "fixed bottom-3 left-1/2 z-30 flex w-[calc(100%-5rem)] -translate-x-1/2 items-center gap-3 overflow-y-hidden rounded-2xl border border-[#e8edf1] bg-white/95 px-3 py-2.5 shadow-[0_8px_30px_rgba(25,45,74,0.14)] backdrop-blur md:sticky md:bottom-0 md:left-auto md:right-auto md:z-0 md:mt-0 md:w-full md:-mx-0 md:translate-x-0 md:justify-center md:rounded-none md:border-r-0 md:border-b-0 md:border-l-0 md:px-8 md:py-4 md:shadow-[0_-4px_20px_rgba(25,45,74,0.06)]",
+        "fixed bottom-3 left-1/2 z-30 flex w-[calc(100%-5rem)] -translate-x-1/2 items-center gap-3 overflow-y-hidden rounded-2xl border border-[#e8edf1] bg-white/95 px-3 py-2.5 shadow-[0_8px_30px_rgba(25,45,74,0.14)] backdrop-blur md:sticky md:right-auto md:bottom-0 md:left-auto md:z-0 md:-mx-0 md:mt-0 md:w-full md:translate-x-0 md:justify-center md:rounded-none md:border-r-0 md:border-b-0 md:border-l-0 md:px-8 md:py-4 md:shadow-[0_-4px_20px_rgba(25,45,74,0.06)]",
         hideAtBottom && isAtBottom && "max-md:hidden",
         className
       )}
@@ -78,14 +81,12 @@ export function FooterPagination({
               {firstItem}
             </strong>
             {" - "}
-            <strong className="font-semibold text-[#526274]">
-              {lastItem}
-            </strong>
+            <strong className="font-semibold text-[#526274]">{lastItem}</strong>
             {" of "}
             <strong className="font-semibold text-[#526274]">
               {totalItems}
             </strong>{" "}
-            products
+            {itemLabel}
           </span>
         </span>
         <div className="flex items-center gap-1.5 sm:gap-3">

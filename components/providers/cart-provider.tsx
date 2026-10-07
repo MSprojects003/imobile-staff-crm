@@ -57,6 +57,39 @@ function isNormalSocketClose(error: unknown) {
   )
 }
 
+function isExpiredRealtimeTokenError(error: unknown) {
+  const pending = [error]
+  const seen = new Set<unknown>()
+
+  while (pending.length > 0) {
+    const current = pending.pop()
+    if (typeof current !== "object" || current === null || seen.has(current)) {
+      continue
+    }
+    seen.add(current)
+
+    const record = current as {
+      cause?: unknown
+      code?: unknown
+      message?: unknown
+      name?: unknown
+    }
+    if (
+      (typeof record.code === "string" &&
+        /invalidjwt/i.test(record.code)) ||
+      (typeof record.name === "string" &&
+        /invalidjwt/i.test(record.name)) ||
+      (typeof record.message === "string" &&
+        /token has expired|jwt expired/i.test(record.message))
+    ) {
+      return true
+    }
+    if (record.cause) pending.push(record.cause)
+  }
+
+  return error instanceof Error && /token has expired|jwt expired/i.test(error.message)
+}
+
 function logCartError(context: string, error: unknown) {
   console.error(`${context} ${getErrorMessage(error)}`)
 }
@@ -123,17 +156,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   React.useEffect(() => {
     let channel: ReturnType<typeof supabase.channel> | undefined
     let cancelled = false
+    let isRefreshingChannel = false
 
-    const initialize = async () => {
-      const publicUserId = await loadCart()
+    const subscribeToCart = (publicUserId: string) => {
       if (cancelled) return
-      if (!publicUserId) {
-        setError("No active public user profile is linked to the signed-in account.")
-        setIsLoading(false)
-        return
-      }
 
-      setIsLoading(false)
       channel = supabase
         .channel(`cart:${publicUserId}`, { config: { private: true } })
         .on(
@@ -150,18 +177,77 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         .subscribe((status, subscriptionError) => {
           if (cancelled) return
 
-          if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
-            if (isNormalSocketClose(subscriptionError)) return
+          if (status === "SUBSCRIBED") {
+            setError(null)
+            return
+          }
+          if (status !== "CHANNEL_ERROR" && status !== "TIMED_OUT") return
+          if (isNormalSocketClose(subscriptionError)) return
 
-            const message = subscriptionError
-              ? getErrorMessage(subscriptionError)
-              : `Cart Realtime subscription ${status.toLowerCase().replace("_", " ")}.`
-            setError(message)
-            if (subscriptionError) {
-              logCartError("Unable to subscribe to cart updates:", subscriptionError)
-            }
+          if (
+            subscriptionError &&
+            isExpiredRealtimeTokenError(subscriptionError)
+          ) {
+            if (isRefreshingChannel) return
+            isRefreshingChannel = true
+
+            void (async () => {
+              try {
+                const { data, error: refreshError } =
+                  await supabase.auth.refreshSession()
+                if (refreshError) {
+                  throw new Error(
+                    `Refreshing the session failed: ${getErrorMessage(refreshError)}`
+                  )
+                }
+                if (!data.session) {
+                  throw new Error(
+                    "Your session has expired. Please sign in again."
+                  )
+                }
+
+                await supabase.realtime.setAuth(data.session.access_token)
+                const expiredChannel = channel
+                channel = undefined
+                if (expiredChannel) {
+                  await supabase.removeChannel(expiredChannel)
+                }
+                if (!cancelled) subscribeToCart(publicUserId)
+              } catch (refreshError) {
+                if (cancelled) return
+                setError(getErrorMessage(refreshError))
+                logCartError(
+                  "Unable to recover cart updates after session expiry:",
+                  refreshError
+                )
+              } finally {
+                isRefreshingChannel = false
+              }
+            })()
+            return
+          }
+
+          const message = subscriptionError
+            ? getErrorMessage(subscriptionError)
+            : `Cart Realtime subscription ${status.toLowerCase().replace("_", " ")}.`
+          setError(message)
+          if (subscriptionError) {
+            logCartError("Unable to subscribe to cart updates:", subscriptionError)
           }
         })
+    }
+
+    const initialize = async () => {
+      const publicUserId = await loadCart()
+      if (cancelled) return
+      if (!publicUserId) {
+        setError("No active public user profile is linked to the signed-in account.")
+        setIsLoading(false)
+        return
+      }
+
+      setIsLoading(false)
+      subscribeToCart(publicUserId)
     }
 
     void initialize().catch((loadError: unknown) => {

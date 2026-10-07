@@ -8,11 +8,13 @@ import {
   Boxes,
   LayoutDashboard,
   ShoppingBag,
+  Store,
   Wrench,
   type LucideIcon,
 } from "lucide-react"
 
 import logo from "@/public/imobile.webp"
+import { NotificationProvider } from "@/components/custom/dashboard/Notification/Sheet"
 import { DashboardHeader } from "@/components/custom/dashboard/dashboard-header"
 import { FooterProfile } from "@/components/custom/dashboard/footer-profile"
 import {
@@ -61,7 +63,8 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Management",
     items: [
       { label: "Products", href: "/products", icon: Boxes },
-      { label: "Orders", href: "#orders", icon: ShoppingBag },
+      { label: "Orders", href: "/orders", icon: ShoppingBag },
+      { label: "Shops", href: "/shops", icon: Store },
       { label: "My Works", href: "#my-works", icon: Wrench },
     ],
   },
@@ -176,43 +179,48 @@ export function AppSidebar({
   children,
   footer,
   productName,
+  orderId,
 }: {
   user: DashboardUser
   children: ReactNode
   footer?: ReactNode
   productName?: string
+  orderId?: string
 }) {
   return (
     <SidebarProvider>
-      <Sidebar
-        collapsible="icon"
-        className="border-r border-[#e8edf1] bg-white [&_[data-sidebar=sidebar]]:bg-white [&_[data-sidebar=sidebar]]:text-[#192d4a]"
-      >
-        <SidebarHeader className="h-16 justify-center border-b border-[#edf0f2] px-4 group-data-[collapsible=icon]:px-2">
-          <SidebarBrand />
-        </SidebarHeader>
+      <NotificationProvider>
+        <Sidebar
+          collapsible="icon"
+          className="border-r border-[#e8edf1] bg-white [&_[data-sidebar=sidebar]]:bg-white [&_[data-sidebar=sidebar]]:text-[#192d4a]"
+        >
+          <SidebarHeader className="h-16 justify-center border-b border-[#edf0f2] px-4 group-data-[collapsible=icon]:px-2">
+            <SidebarBrand />
+          </SidebarHeader>
 
-        <SidebarContent className="gap-0 px-2 py-4 group-data-[collapsible=icon]:px-2">
-          <SidebarNavigation />
-        </SidebarContent>
+          <SidebarContent className="gap-0 px-2 py-4 group-data-[collapsible=icon]:px-2">
+            <SidebarNavigation />
+          </SidebarContent>
 
-        <SidebarFooter className="border-t border-[#edf0f2] bg-[#fafbfc] p-3 group-data-[collapsible=icon]:p-2">
-          <FooterProfile fullName={user.full_name} phone={user.phone} />
-        </SidebarFooter>
+          <SidebarFooter className="border-t border-[#edf0f2] bg-[#fafbfc] p-3 group-data-[collapsible=icon]:p-2">
+            <FooterProfile fullName={user.full_name} phone={user.phone} />
+          </SidebarFooter>
 
-        <SidebarRail />
-      </Sidebar>
+          <SidebarRail />
+        </Sidebar>
 
-      <SidebarInset className="relative min-h-svh bg-[linear-gradient(135deg,#ffffff_0%,#ffffff_34%,#fafbfc_58%,#eef0f2_100%)]">
-        <DashboardHeader
-          initials={getInitials(user.full_name)}
-          productName={productName}
-        />
-        <main className="min-w-0 flex-1 p-4 pb-24 sm:p-6 sm:pb-24 lg:px-8 lg:pt-6 lg:pb-24">
-          {children}
-        </main>
-        {footer}
-      </SidebarInset>
+        <SidebarInset className="relative min-h-svh bg-[linear-gradient(135deg,#ffffff_0%,#ffffff_34%,#fafbfc_58%,#eef0f2_100%)]">
+          <DashboardHeader
+            initials={getInitials(user.full_name)}
+            productName={productName}
+            orderId={orderId}
+          />
+          <main className="min-w-0 flex-1 p-4 pb-24 sm:p-6 sm:pb-24 lg:px-8 lg:pt-6 lg:pb-24">
+            {children}
+          </main>
+          {footer}
+        </SidebarInset>
+      </NotificationProvider>
     </SidebarProvider>
   )
 }

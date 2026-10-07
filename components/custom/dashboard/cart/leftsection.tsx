@@ -119,23 +119,28 @@ export function LeftSection({
   }
   const displayItems = [...productsById.values()]
   const filteredItems = displayItems.filter((item) =>
-    item.name.toLocaleLowerCase().includes(searchQuery.trim().toLocaleLowerCase())
+    item.name
+      .toLocaleLowerCase()
+      .includes(searchQuery.trim().toLocaleLowerCase())
   )
   const cartItemCount = items.length
   const subtotal = items.reduce((sum, item) => sum + item.subtotal, 0)
 
   return (
-    <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1.7fr)_minmax(320px,1fr)] xl:items-start xl:gap-8">
-      <section aria-labelledby="cart-heading" className="min-w-0">
+    <div className="grid min-w-0 gap-6 pb-32 xl:h-[calc(100dvh-2rem)] xl:grid-cols-[minmax(0,1.7fr)_minmax(320px,1fr)] xl:items-start xl:gap-8 xl:pb-0">
+      <section
+        aria-labelledby="cart-heading"
+        className="min-w-0 xl:flex xl:h-full xl:min-h-0 xl:flex-col"
+      >
         <Link
           href="/products"
-          className={`inline-flex items-center gap-2 rounded text-sm font-medium text-red-700 transition hover:text-red-900 ${focusRing}`}
+          className={`inline-flex shrink-0 items-center gap-2 self-start rounded text-sm font-medium text-red-700 transition hover:text-red-900 ${focusRing}`}
         >
           <ArrowLeft aria-hidden="true" className="size-4" />
           Continue shopping
         </Link>
 
-        <div className="mb-5 mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+        <div className="mt-4 mb-5 flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
           <h1
             id="cart-heading"
             className="shrink-0 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl"
@@ -153,7 +158,7 @@ export function LeftSection({
               placeholder="Search cart items..."
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
-              className={`h-10 w-full rounded-full border border-slate-200 bg-white pr-10 pl-11 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-red-300 focus:ring-2 focus:ring-red-100 ${focusRing}`}
+              className={`h-10 w-full rounded-full border border-slate-200 bg-white pr-10 pl-11 text-sm text-slate-900 transition outline-none placeholder:text-slate-400 focus:border-red-300 focus:ring-2 focus:ring-red-100 ${focusRing}`}
             />
             {searchQuery ? (
               <button
@@ -176,9 +181,12 @@ export function LeftSection({
         {cartError || actionError ? (
           <div
             role="alert"
-            className="mb-4 flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 p-3.5 text-sm text-red-800"
+            className="mb-4 flex shrink-0 items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 p-3.5 text-sm text-red-800"
           >
-            <AlertCircle aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+            <AlertCircle
+              aria-hidden="true"
+              className="mt-0.5 size-4 shrink-0"
+            />
             <p>{actionError ?? cartError}</p>
           </div>
         ) : null}
@@ -189,7 +197,7 @@ export function LeftSection({
           <>
             <div
               dir="rtl"
-              className="xl:h-[calc(100dvh-12rem)] xl:overflow-y-auto xl:pl-2 [scrollbar-color:#fca5a5_#fff1f2] [scrollbar-width:thin]"
+              className="[scrollbar-width:thin] [scrollbar-color:#fca5a5_#fff1f2] xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pl-2"
             >
               <div dir="ltr">
                 <ul className="space-y-3">
@@ -205,7 +213,7 @@ export function LeftSection({
               </div>
             </div>
 
-            <p className="mt-4 flex items-start gap-2 rounded-none bg-red-50 px-4 py-3 text-sm text-red-800">
+            <p className="mt-4 flex shrink-0 items-start gap-2 rounded-none bg-red-50 px-4 py-3 text-sm text-red-800">
               <Info aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
               Discount codes and order notes can be added in the next step.
             </p>

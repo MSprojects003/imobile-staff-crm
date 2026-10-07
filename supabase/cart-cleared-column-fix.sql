@@ -73,3 +73,116 @@ $$;
 
 revoke all on function public.refresh_cart_prices() from public, anon;
 grant execute on function public.refresh_cart_prices() to authenticated;
+
+create or replace function public.update_cart_item_quantity(
+  p_cart_item_id uuid,
+  p_quantity integer
+)
+returns setof public.cart_items
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_public_user_id uuid;
+  v_product_id uuid;
+begin
+  if auth.uid() is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  v_public_user_id := public.current_public_user_id();
+  if v_public_user_id is null then
+    raise exception 'No active public user profile is associated with this login';
+  end if;
+
+  if p_cart_item_id is null or p_quantity is null or p_quantity <= 0 then
+    raise exception 'Invalid cart item or quantity';
+  end if;
+
+  select product_id
+  into v_product_id
+  from public.cart_items
+  where id = p_cart_item_id
+    and user_id = v_public_user_id
+    and "isCleared" = false;
+
+  if not found then
+    raise exception 'Cart item was not found';
+  end if;
+
+  perform pg_advisory_xact_lock(
+    hashtextextended(v_public_user_id::text || v_product_id::text, 0)
+  );
+
+  update public.cart_items
+  set quantity = p_quantity,
+      updated_at = now()
+  where id = p_cart_item_id
+    and user_id = v_public_user_id
+    and "isCleared" = false;
+
+  perform public.reprice_cart_product(v_public_user_id, v_product_id);
+
+  return query
+    select *
+    from public.cart_items
+    where id = p_cart_item_id
+      and user_id = v_public_user_id
+      and "isCleared" = false;
+end;
+$$;
+
+revoke all on function public.update_cart_item_quantity(uuid, integer)
+  from public, anon;
+grant execute on function public.update_cart_item_quantity(uuid, integer)
+  to authenticated;
+
+create or replace function public.remove_cart_item(p_cart_item_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_public_user_id uuid;
+  v_product_id uuid;
+begin
+  if auth.uid() is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  v_public_user_id := public.current_public_user_id();
+  if v_public_user_id is null then
+    raise exception 'No active public user profile is associated with this login';
+  end if;
+  if p_cart_item_id is null then
+    raise exception 'Invalid cart item';
+  end if;
+
+  select product_id
+  into v_product_id
+  from public.cart_items
+  where id = p_cart_item_id
+    and user_id = v_public_user_id
+    and "isCleared" = false;
+
+  if not found then
+    raise exception 'Cart item was not found';
+  end if;
+
+  perform pg_advisory_xact_lock(
+    hashtextextended(v_public_user_id::text || v_product_id::text, 0)
+  );
+
+  delete from public.cart_items
+  where id = p_cart_item_id
+    and user_id = v_public_user_id
+    and "isCleared" = false;
+
+  perform public.reprice_cart_product(v_public_user_id, v_product_id);
+end;
+$$;
+
+revoke all on function public.remove_cart_item(uuid) from public, anon;
+grant execute on function public.remove_cart_item(uuid) to authenticated;

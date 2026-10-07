@@ -4,9 +4,10 @@ import * as React from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { usePathname, useSearchParams } from "next/navigation"
-import { Bell, Menu, ShoppingCart } from "lucide-react"
+import { Menu, ShoppingCart } from "lucide-react"
 
 import logo from "@/public/imobile.webp"
+import { NotificationBellButton } from "@/components/custom/dashboard/Notification/Sheet"
 import { SearchBar } from "@/components/custom/SearchBar"
 import {
   Breadcrumb,
@@ -36,9 +37,11 @@ function getPageName(pathname: string) {
 export function DashboardHeader({
   initials,
   productName,
+  orderId,
 }: {
   initials: string
   productName?: string
+  orderId?: string
 }) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -47,7 +50,13 @@ export function DashboardHeader({
   const isDashboard = pathname === "/"
   const isProducts = pathname === "/products"
   const isProductDetails = pathname.startsWith("/products/")
-  const selectedCategory = getCategory(searchParams.get("category") ?? undefined)
+  const isOrderDetails = pathname.startsWith("/orders/")
+  const breadcrumbPageName = isOrderDetails
+    ? orderId || "Order details"
+    : pageName
+  const selectedCategory = getCategory(
+    searchParams.get("category") ?? undefined
+  )
 
   return (
     <header className="sticky top-0 z-20 flex h-[68px] items-center gap-3 border-b border-[#edf0f2] bg-white/95 px-4 backdrop-blur sm:px-6 lg:px-8">
@@ -87,7 +96,9 @@ export function DashboardHeader({
                   <BreadcrumbSeparator />
                   <BreadcrumbItem className="min-w-0">
                     <BreadcrumbPage className="truncate">
-                      {isProductDetails ? productName ?? "Product" : pageName}
+                      {isProductDetails
+                        ? (productName ?? "Product")
+                        : breadcrumbPageName}
                     </BreadcrumbPage>
                   </BreadcrumbItem>
                 </>
@@ -137,13 +148,7 @@ export function DashboardHeader({
             ) : null}
           </Link>
         </div>
-        <button
-          type="button"
-          aria-label="View notifications"
-          className="flex size-9 items-center justify-center rounded-lg text-[#526274] transition hover:bg-[#fff1f1] hover:text-[#e7242b]"
-        >
-          <Bell className="size-[18px]" />
-        </button>
+        <NotificationBellButton />
         <div className="hidden size-8 items-center justify-center rounded-full bg-[#ffe0e1] text-[11px] font-bold text-[#e7242b] md:flex">
           {initials}
         </div>

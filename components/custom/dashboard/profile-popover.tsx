@@ -11,6 +11,7 @@ import {
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 
+import { useNotificationCenter } from "@/components/custom/dashboard/Notification/Sheet"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,6 +36,7 @@ export function ProfilePopover({
 }: ProfilePopoverProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  const { setOpen, unreadCount } = useNotificationCenter()
 
   async function signOut() {
     setLoading(true)
@@ -95,9 +97,19 @@ export function ProfilePopover({
           <CircleUserRound className="size-4" />
           Account
         </DropdownMenuItem>
-        <DropdownMenuItem className="cursor-pointer gap-3 rounded-lg px-3 py-2.5 text-sm text-[#33465b] focus:bg-[#fff1f1] focus:text-[#e7242b]">
-          <Bell className="size-4" />
-          Notifications
+        <DropdownMenuItem
+          onClick={() => setOpen(true)}
+          className="cursor-pointer gap-3 rounded-lg px-3 py-2.5 text-sm text-[#33465b] focus:bg-[#fff1f1] focus:text-[#e7242b]"
+        >
+          <Bell aria-hidden="true" className="size-4 shrink-0" />
+          <span className="flex-1">Notifications</span>
+          {unreadCount > 0 ? (
+            <span className="rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-700 tabular-nums">
+              {unreadCount > 99 ? "99+" : unreadCount} unread
+            </span>
+          ) : (
+            <span className="text-[10px] text-slate-500">0 unread</span>
+          )}
         </DropdownMenuItem>
         <DropdownMenuSeparator className="bg-[#edf0f2]" />
         <DropdownMenuItem

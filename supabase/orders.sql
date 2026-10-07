@@ -7,6 +7,37 @@ create sequence if not exists public.orders_order_id_seq;
 alter table public.orders
   add column if not exists order_id text;
 
+alter table public.orders
+  add column if not exists parcels_delivered integer not null default 0;
+
+alter table public.orders
+  add column if not exists refund_amount numeric(12, 2) not null default 0;
+
+alter table public.order_items
+  add column if not exists status text not null default 'pending';
+
+alter table public.sub_order_items
+  add column if not exists status text not null default 'pending';
+
+alter table public.order_items
+  drop constraint if exists order_items_status_check,
+  add constraint order_items_status_check
+    check (status = any (array['pending'::text, 'processing'::text]));
+
+alter table public.sub_order_items
+  drop constraint if exists sub_order_items_status_check,
+  add constraint sub_order_items_status_check
+    check (
+      status = any (
+        array[
+          'pending'::text,
+          'packing'::text,
+          'processing'::text,
+          'no_items'::text
+        ]
+      )
+    );
+
 do $$
 declare
   v_max_order_number bigint;
@@ -135,7 +166,6 @@ declare
   v_full_total numeric(12, 2);
   v_deducted_amount numeric(12, 2);
   v_final_total numeric(12, 2);
-  v_tax numeric(12, 2);
   v_admin_message text;
   v_shop_message text;
   v_sms_messages jsonb;
@@ -216,8 +246,7 @@ begin
     raise exception 'Your cart is empty';
   end if;
 
-  v_tax := ceil(v_estimated_total * 0.15);
-  v_full_total := v_estimated_total + 350 + v_tax;
+  v_full_total := v_estimated_total;
   v_deducted_amount := case
     when p_is_negotiable_price then coalesce(p_deducted_amount, 0)
     else 0
@@ -354,6 +383,14 @@ begin
     coalesce(v_admin_contact, 'the iMobile admin team')
   );
 
+  with recipients as (
+    select p_user_id as id
+    union
+    select admins.id
+    from public.users admins
+    where admins.is_admin = true
+      and admins.status = true
+  )
   insert into public.notifications (
     title,
     message,
@@ -366,27 +403,38 @@ begin
     link
   )
   select
-    'New order received',
-    format(
-      'Order %s: %s (@%s) placed an order with %s (%s). Products/units: %s. Total payable: Rs. %s.',
-      v_order_number,
-      v_actor.full_name,
-      v_actor.username,
-      v_shop.name,
-      v_shop.area,
-      v_products_count,
-      to_char(v_final_total, 'FM999,999,990.00')
-    ),
+    case
+      when recipients.id = p_user_id then 'Order placed successfully'
+      else 'New order received'
+    end,
+    case
+      when recipients.id = p_user_id then format(
+        'You have successfully placed an order. Order ID: %s. Shop: %s (%s). Products/units: %s. Total payable: Rs. %s.',
+        v_order_number,
+        v_shop.name,
+        v_shop.area,
+        v_products_count,
+        to_char(v_final_total, 'FM999,999,990.00')
+      )
+      else format(
+        'Order %s: %s (@%s) placed an order with %s (%s). Products/units: %s. Total payable: Rs. %s.',
+        v_order_number,
+        v_actor.full_name,
+        v_actor.username,
+        v_shop.name,
+        v_shop.area,
+        v_products_count,
+        to_char(v_final_total, 'FM999,999,990.00')
+      )
+    end,
     'order_created',
     p_user_id,
-    admins.id,
+    recipients.id,
     false,
     false,
     v_order_id,
     null
-  from public.users admins
-  where admins.is_admin = true
-    and admins.status = true;
+  from recipients;
 
   insert into public.sms (body, user_id, shop_id, type)
   select v_admin_message, admins.id, null, 'order_created'
@@ -489,4 +537,159 @@ grant execute on function public.create_order_from_cart(
   boolean,
   numeric,
   text
+) to service_role;
+
+create or replace function public.update_sub_order_item_status(
+  p_sub_order_item_id uuid,
+  p_status text,
+  p_actor_user_id uuid
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_order_id uuid;
+  v_order_item_id uuid;
+  v_previous_status text;
+  v_subtotal numeric(12, 2);
+  v_refund_delta numeric(12, 2) := 0;
+  v_refund_amount numeric(12, 2);
+  v_order_item_status text;
+  v_order_status text;
+  v_final_total numeric(12, 2);
+begin
+  if p_status is null
+     or p_status not in ('pending', 'packing', 'processing', 'no_items') then
+    raise exception 'Invalid sub-order item status';
+  end if;
+
+  if not exists (
+    select 1
+    from public.users u
+    where u.id = p_actor_user_id
+      and u.status = true
+      and u.is_rep = true
+      and u.is_admin = false
+      and u.is_sub_admin = false
+      and u.is_shop = false
+  ) then
+    raise exception 'An active staff account is required to update order items';
+  end if;
+
+  select
+    o.id,
+    oi.id,
+    soi.status,
+    soi.subtotal
+  into
+    v_order_id,
+    v_order_item_id,
+    v_previous_status,
+    v_subtotal
+  from public.sub_order_items soi
+  join public.order_items oi on oi.id = soi.order_item_id
+  join public.orders o on o.id = oi.order_id
+  where soi.id = p_sub_order_item_id
+  for update of o, soi;
+
+  if not found then
+    raise exception 'Sub-order item was not found';
+  end if;
+
+  if v_previous_status = p_status then
+    select
+      oi.status,
+      o.status,
+      o.refund_amount,
+      greatest(
+        0,
+        o.estimated_total - o.deducted_amount - o.refund_amount
+      )
+    into
+      v_order_item_status,
+      v_order_status,
+      v_refund_amount,
+      v_final_total
+    from public.order_items oi
+    join public.orders o on o.id = oi.order_id
+    where oi.id = v_order_item_id;
+
+    return jsonb_build_object(
+      'status', v_previous_status,
+      'order_item_status', v_order_item_status,
+      'order_status', v_order_status,
+      'refund_amount', v_refund_amount,
+      'final_total', v_final_total
+    );
+  end if;
+
+  if p_status = 'no_items' then
+    v_refund_delta := v_subtotal;
+  elsif v_previous_status = 'no_items' then
+    v_refund_delta := -v_subtotal;
+  end if;
+
+  update public.sub_order_items
+  set status = p_status
+  where id = p_sub_order_item_id;
+
+  update public.order_items oi
+  set status = case
+    when exists (
+      select 1
+      from public.sub_order_items soi
+      where soi.order_item_id = oi.id
+        and soi.status <> 'pending'
+    ) then 'processing'
+    else 'pending'
+  end
+  where oi.id = v_order_item_id
+  returning oi.status into v_order_item_status;
+
+  update public.orders o
+  set
+    refund_amount = greatest(0, coalesce(o.refund_amount, 0) + v_refund_delta),
+    full_total = greatest(
+      0,
+      o.estimated_total
+        - greatest(0, coalesce(o.refund_amount, 0) + v_refund_delta)
+    ),
+    status = case
+      when exists (
+        select 1
+        from public.order_items oi
+        where oi.order_id = o.id
+          and oi.status = 'processing'
+      ) then 'processing'
+      else o.status
+    end
+  where o.id = v_order_id
+  returning
+    o.status,
+    o.refund_amount,
+    greatest(0, o.estimated_total - o.deducted_amount - o.refund_amount)
+  into v_order_status, v_refund_amount, v_final_total;
+
+  return jsonb_build_object(
+    'status', p_status,
+    'order_item_status', v_order_item_status,
+    'order_status', v_order_status,
+    'refund_amount', v_refund_amount,
+    'final_total', v_final_total
+  );
+end;
+$$;
+
+revoke all on function public.update_sub_order_item_status(
+  uuid,
+  text,
+  uuid
+) from public, anon, authenticated;
+
+grant execute on function public.update_sub_order_item_status(
+  uuid,
+  text,
+  uuid
 ) to service_role;
