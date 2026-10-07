@@ -20,6 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Spinner } from "@/components/ui/spinner"
+import { useSidebar } from "@/components/ui/sidebar"
 
 type ProfilePopoverProps = {
   fullName: string
@@ -36,6 +37,7 @@ export function ProfilePopover({
 }: ProfilePopoverProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  const { isMobile } = useSidebar()
   const { setOpen, unreadCount } = useNotificationCenter()
 
   async function signOut() {
@@ -53,7 +55,7 @@ export function ProfilePopover({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        className="flex w-full items-center gap-3 rounded-xl bg-[#f8fafb] px-2 py-2 text-left transition outline-none hover:bg-[#f1f4f6] focus-visible:ring-2 focus-visible:ring-[#e7242b]/20 group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:rounded-lg group-data-[collapsible=icon]:p-0"
+        className="flex w-full items-center gap-3 rounded-xl bg-[#f8fafb] px-2 py-2 text-left transition outline-none group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:rounded-lg group-data-[collapsible=icon]:p-0 hover:bg-[#f1f4f6] focus-visible:ring-2 focus-visible:ring-[#e7242b]/20"
         aria-label="Open account menu"
       >
         <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#ffe0e1] text-sm font-bold text-[#e7242b] group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:text-xs">
@@ -79,9 +81,9 @@ export function ProfilePopover({
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
-        side="right"
-        sideOffset={10}
-        className="w-64 rounded-xl border border-[#e5eaee] bg-white p-1.5 text-[#192d4a] shadow-[0_12px_30px_rgba(29,52,74,0.14)]"
+        side={isMobile ? "top" : "right"}
+        sideOffset={isMobile ? 8 : 10}
+        className="w-64 max-w-[calc(100vw-2rem)] rounded-xl border border-[#e5eaee] bg-white p-1.5 text-[#192d4a] shadow-[0_12px_30px_rgba(29,52,74,0.14)]"
       >
         <div className="flex items-center gap-3 px-3 py-3">
           <div className="flex size-9 items-center justify-center rounded-full bg-[#ffe0e1] text-xs font-bold text-[#e7242b]">

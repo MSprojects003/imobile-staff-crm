@@ -65,7 +65,7 @@ const NAV_GROUPS: NavGroup[] = [
       { label: "Products", href: "/products", icon: Boxes },
       { label: "Orders", href: "/orders", icon: ShoppingBag },
       { label: "Shops", href: "/shops", icon: Store },
-      { label: "My Works", href: "#my-works", icon: Wrench },
+      { label: "My Works", href: "/assign-work", icon: Wrench },
     ],
   },
 ]

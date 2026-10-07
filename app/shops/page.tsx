@@ -112,6 +112,11 @@ export default async function ShopsPage() {
   const currentStaffIds = new Set(
     ((currentStaffData ?? []) as { id: string }[]).map((staff) => staff.id)
   )
+  const currentUserStaffIds = new Set(
+    staffRows
+      .filter((staff) => staff.user_id === user.id)
+      .map((staff) => staff.id)
+  )
   const shops: ShopDirectoryItem[] = shopRows.map((shop) => ({
     id: shop.id,
     name: shop.name,
@@ -125,6 +130,9 @@ export default async function ShopsPage() {
     staffName: shop.created_by_staff_id
       ? (staffNames.get(shop.created_by_staff_id) ?? "Former staff")
       : "Unknown staff",
+    createdByCurrentUser:
+      shop.created_by_staff_id !== null &&
+      currentUserStaffIds.has(shop.created_by_staff_id),
     canEdit:
       shop.created_by_staff_id !== null &&
       currentStaffIds.has(shop.created_by_staff_id),

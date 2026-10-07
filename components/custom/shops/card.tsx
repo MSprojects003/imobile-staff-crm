@@ -52,6 +52,7 @@ export type ShopDirectoryItem = {
   image: string | null
   createdByStaffId: string | null
   staffName: string
+  createdByCurrentUser: boolean
   canEdit: boolean
 }
 
@@ -298,7 +299,16 @@ function ShopCard({
             onSave={saveField}
           />
           <p className="mt-1 truncate text-[11px] text-slate-500">
-            Added by {shop.staffName}
+            Added by{" "}
+            <span
+              className={
+                shop.createdByCurrentUser
+                  ? "font-semibold text-red-700"
+                  : undefined
+              }
+            >
+              {shop.createdByCurrentUser ? "Me!" : shop.staffName}
+            </span>
           </p>
         </div>
       </div>
@@ -695,8 +705,16 @@ export function ShopDirectory({
                             }
                           />
                         </TableCell>
-                        <TableCell className="max-w-28 truncate text-slate-500">
-                          {shop.staffName}
+                        <TableCell className="max-w-40">
+                          <span
+                            className={
+                              shop.createdByCurrentUser
+                                ? "font-semibold text-red-700"
+                                : "text-slate-500"
+                            }
+                          >
+                            {shop.createdByCurrentUser ? "Me!" : shop.staffName}
+                          </span>
                         </TableCell>
                       </TableRow>
                     ))}
