@@ -67,7 +67,7 @@ export function ParcelsDeliveredInput({
         <button
           type="button"
           onClick={() => setIsEditing(true)}
-          aria-label={`Edit parcels delivered for order`}
+          aria-label={`Edit parcels delivered for order ${orderId}`}
           className="inline-flex min-w-10 items-center justify-center gap-1 rounded-md px-2 py-1 text-sm font-medium text-slate-700 tabular-nums transition hover:bg-red-50 hover:text-red-700 focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:outline-none"
         >
           {initialValue}

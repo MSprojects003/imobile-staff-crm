@@ -1,19 +1,13 @@
 import { createHmac, randomInt } from "node:crypto"
 import { NextResponse } from "next/server"
 
-import { getStaffAuthPassword } from "@/lib/auth-credentials"
+import {
+  getStaffAuthPassword,
+  normalizeStaffPhone,
+} from "@/lib/auth-credentials"
 import { sendNotifySms } from "@/lib/notify-lk"
 import { createSupabaseAdminClient } from "@/lib/supabase/admin"
 import { setPendingAuth } from "@/lib/pending-auth"
-
-function normalizePhone(value: string) {
-  const digits = value.replace(/\D/g, "")
-
-  if (digits.startsWith("0094")) return `+${digits.slice(2)}`
-  if (digits.startsWith("94")) return `+${digits}`
-  if (digits.startsWith("0")) return `+94${digits.slice(1)}`
-  return `+94${digits}`
-}
 
 async function sendNotifyOtp(phone: string, code: string) {
   await sendNotifySms(
@@ -56,14 +50,17 @@ export async function POST(request: Request) {
 
     if (error) throw error
 
-    if (!user || normalizePhone(user.phone) !== normalizePhone(body.phone)) {
+    if (
+      !user ||
+      normalizeStaffPhone(user.phone) !== normalizeStaffPhone(body.phone)
+    ) {
       return NextResponse.json(
         { error: "Incorrect credentials." },
         { status: 401 }
       )
     }
 
-    const phone = normalizePhone(user.phone)
+    const phone = normalizeStaffPhone(user.phone)
     let authUser = null
     for (let page = 1; ; page += 1) {
       const { data: authUsers, error: authUsersError } =
@@ -74,7 +71,7 @@ export async function POST(request: Request) {
       authUser =
         authUsers.users.find(
           (candidate) =>
-            candidate.phone && normalizePhone(candidate.phone) === phone
+            candidate.phone && normalizeStaffPhone(candidate.phone) === phone
         ) ?? null
 
       if (authUser || authUsers.users.length < 1000) break
@@ -85,8 +82,10 @@ export async function POST(request: Request) {
         await adminClient.auth.admin.createUser({
           phone,
           phone_confirm: true,
-          user_metadata: {
+          app_metadata: {
             staff_user_id: user.id,
+          },
+          user_metadata: {
             source: "staff-portal",
           },
         })
@@ -110,7 +109,7 @@ export async function POST(request: Request) {
         authUser =
           refreshedUsers.users.find(
             (candidate) =>
-              candidate.phone && normalizePhone(candidate.phone) === phone
+              candidate.phone && normalizeStaffPhone(candidate.phone) === phone
           ) ?? null
       }
     }
@@ -132,12 +131,37 @@ export async function POST(request: Request) {
         phone,
         password: authPassword,
         phone_confirm: true,
+        app_metadata: {
+          ...authUser.app_metadata,
+          staff_user_id: user.id,
+        },
       }
     )
     if (updateError) throw updateError
 
     const code = String(randomInt(0, 1_000_000)).padStart(6, "0")
     await sendNotifyOtp(phone, code)
+
+    try {
+      const { error: smsLogError } = await adminClient.from("sms").insert({
+        body: "OTP*** sent",
+        user_id: user.id,
+        shop_id: null,
+        type: "otp_sent",
+      })
+      if (smsLogError) {
+        console.error("Staff login OTP SMS log insert failed.", {
+          code: smsLogError.code,
+        })
+      }
+    } catch (smsLogError) {
+      console.error("Staff login OTP SMS log insert failed.", {
+        detail:
+          smsLogError instanceof Error
+            ? smsLogError.message
+            : "Unexpected database error",
+      })
+    }
 
     const secret = process.env.SUPABASE_SECRET_KEY
     if (!secret) throw new Error("Missing SUPABASE_SECRET_KEY.")

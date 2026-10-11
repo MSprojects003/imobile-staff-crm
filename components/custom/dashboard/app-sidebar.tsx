@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   ShoppingBag,
   Store,
+  Tag,
   Wrench,
   type LucideIcon,
 } from "lucide-react"
@@ -39,8 +40,12 @@ import {
 /* -------------------------------------------------------------------------- */
 
 type DashboardUser = {
+  id: string
   full_name: string
+  username: string
   phone: string
+  profile_image_url: string | null
+  is_rep: boolean
 }
 
 type NavItem = {
@@ -62,7 +67,8 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: "Management",
     items: [
-      { label: "Products", href: "/products", icon: Boxes },
+      { label: "Categories", href: "/categories", icon: Boxes },
+      { label: "Brands", href: "/brands", icon: Tag },
       { label: "Orders", href: "/orders", icon: ShoppingBag },
       { label: "Shops", href: "/shops", icon: Store },
       { label: "My Works", href: "/assign-work", icon: Wrench },
@@ -203,7 +209,14 @@ export function AppSidebar({
           </SidebarContent>
 
           <SidebarFooter className="border-t border-[#edf0f2] bg-[#fafbfc] p-3 group-data-[collapsible=icon]:p-2">
-            <FooterProfile fullName={user.full_name} phone={user.phone} />
+            <FooterProfile
+              userId={user.id}
+              fullName={user.full_name}
+              username={user.username}
+              phone={user.phone}
+              profileImageUrl={user.profile_image_url}
+              role={user.is_rep ? "Sales" : "Staff"}
+            />
           </SidebarFooter>
 
           <SidebarRail />

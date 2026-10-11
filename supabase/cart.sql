@@ -555,6 +555,143 @@ $$;
 revoke all on function public.remove_cart_item(uuid) from public, anon;
 grant execute on function public.remove_cart_item(uuid) to authenticated;
 
+create or replace function public.remove_cart_item_selection(
+  p_cart_item_id uuid,
+  p_selection_type text,
+  p_selection_value text
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_public_user_id uuid;
+  v_product_id uuid;
+  v_item record;
+  v_models text[];
+  v_colors text[];
+  v_selection_key text;
+begin
+  if auth.uid() is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  v_public_user_id := public.current_public_user_id();
+  if v_public_user_id is null then
+    raise exception 'No active public user profile is associated with this login';
+  end if;
+
+  if p_cart_item_id is null
+     or p_selection_type is null
+     or p_selection_type not in ('model', 'color')
+     or nullif(btrim(p_selection_value), '') is null then
+    raise exception 'Invalid cart selection';
+  end if;
+
+  select product_id
+  into v_product_id
+  from public.cart_items
+  where id = p_cart_item_id
+    and user_id = v_public_user_id
+    and "isCleared" = false;
+
+  if not found then
+    raise exception 'Cart item was not found';
+  end if;
+
+  perform pg_advisory_xact_lock(
+    hashtextextended(v_public_user_id::text || v_product_id::text, 0)
+  );
+
+  if not exists (
+    select 1
+    from public.cart_items
+    where id = p_cart_item_id
+      and user_id = v_public_user_id
+      and "isCleared" = false
+      and case
+        when p_selection_type = 'model'
+          then p_selection_value = any(models)
+        else p_selection_value = any(colors)
+      end
+  ) then
+    raise exception 'Cart selection was not found';
+  end if;
+
+  for v_item in
+    select id, models, colors, quantity, subtotal
+    from public.cart_items
+    where user_id = v_public_user_id
+      and product_id = v_product_id
+      and "isCleared" = false
+      and case
+        when p_selection_type = 'model'
+          then p_selection_value = any(models)
+        else p_selection_value = any(colors)
+      end
+    for update
+  loop
+    v_models := case
+      when p_selection_type = 'model'
+        then array_remove(v_item.models, p_selection_value)
+      else v_item.models
+    end;
+    v_colors := case
+      when p_selection_type = 'color'
+        then array_remove(v_item.colors, p_selection_value)
+      else v_item.colors
+    end;
+
+    delete from public.cart_items
+    where id = v_item.id;
+
+    if cardinality(v_models) > 0 and cardinality(v_colors) > 0 then
+      v_selection_key := md5(
+        jsonb_build_object(
+          'product_id', v_product_id,
+          'models', v_models,
+          'colors', v_colors
+        )::text
+      );
+
+      insert into public.cart_items (
+        user_id,
+        product_id,
+        models,
+        colors,
+        selection_key,
+        quantity,
+        subtotal
+      )
+      values (
+        v_public_user_id,
+        v_product_id,
+        v_models,
+        v_colors,
+        v_selection_key,
+        v_item.quantity,
+        v_item.subtotal
+      )
+      on conflict (user_id, selection_key) do update
+        set quantity = case
+              when public.cart_items."isCleared" then excluded.quantity
+              else public.cart_items.quantity + excluded.quantity
+            end,
+            "isCleared" = false,
+            updated_at = now();
+    end if;
+  end loop;
+
+  perform public.reprice_cart_product(v_public_user_id, v_product_id);
+end;
+$$;
+
+revoke all on function public.remove_cart_item_selection(uuid, text, text)
+  from public, anon;
+grant execute on function public.remove_cart_item_selection(uuid, text, text)
+  to authenticated;
+
 -- ---------------------------------------------------------------------
 -- 7. ONE-TIME DATA CLEANUP
 --    Splits any multi-model / multi-color row into single-combination rows

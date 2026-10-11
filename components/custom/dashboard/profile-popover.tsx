@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Image from "next/image"
 import {
   Bell,
   ChevronUp,
@@ -8,6 +9,7 @@ import {
   CircleUserRound,
   EllipsisVertical,
   LogOut,
+  Target,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 
@@ -21,22 +23,38 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Spinner } from "@/components/ui/spinner"
 import { useSidebar } from "@/components/ui/sidebar"
+import { ProfileSheet } from "@/components/custom/dashboard/profileSheet"
+import {
+  MyTargets,
+  type TargetRecord,
+} from "@/components/custom/dashboard/MyTargets"
 
 type ProfilePopoverProps = {
+  userId: string
   fullName: string
+  username: string
   phone: string
+  profileImageUrl: string | null
   role: string
   initials: string
 }
 
 export function ProfilePopover({
+  userId,
   fullName,
+  username,
   phone,
+  profileImageUrl,
   role,
   initials,
 }: ProfilePopoverProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  const [profileOpen, setProfileOpen] = useState(false)
+  const [targetsOpen, setTargetsOpen] = useState(false)
+  const [targetsLoading, setTargetsLoading] = useState(false)
+  const [targetsError, setTargetsError] = useState<string | null>(null)
+  const [targetRecords, setTargetRecords] = useState<TargetRecord[]>([])
   const { isMobile } = useSidebar()
   const { setOpen, unreadCount } = useNotificationCenter()
 
@@ -52,14 +70,61 @@ export function ProfilePopover({
     }
   }
 
+  async function loadTargets() {
+    setTargetsLoading(true)
+    setTargetsError(null)
+
+    try {
+      const response = await fetch("/api/monthly-targets", {
+        cache: "no-store",
+        signal: AbortSignal.timeout(15_000),
+      })
+      if (!response.headers.get("content-type")?.includes("application/json")) {
+        throw new Error(
+          "Unable to load targets. Your session may have expired; refresh and sign in again."
+        )
+      }
+
+      const result = (await response.json()) as {
+        records?: TargetRecord[]
+        error?: string
+      }
+      if (!response.ok) {
+        throw new Error(result.error ?? "Unable to load sales targets.")
+      }
+      setTargetRecords(result.records ?? [])
+    } catch (loadError) {
+      setTargetsError(
+        loadError instanceof DOMException && loadError.name === "TimeoutError"
+          ? "Loading your targets took too long. Please try again."
+          : loadError instanceof Error
+            ? loadError.message
+            : "Unable to load sales targets."
+      )
+    } finally {
+      setTargetsLoading(false)
+    }
+  }
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
         className="flex w-full items-center gap-3 rounded-xl bg-[#f8fafb] px-2 py-2 text-left transition outline-none group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:rounded-lg group-data-[collapsible=icon]:p-0 hover:bg-[#f1f4f6] focus-visible:ring-2 focus-visible:ring-[#e7242b]/20"
         aria-label="Open account menu"
       >
-        <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#ffe0e1] text-sm font-bold text-[#e7242b] group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:text-xs">
-          {initials}
+        <div className="relative flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#ffe0e1] text-sm font-bold text-[#e7242b] group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:text-xs">
+          {profileImageUrl ? (
+            <Image
+              src={profileImageUrl}
+              alt=""
+              fill
+              sizes="40px"
+              unoptimized
+              className="object-cover"
+            />
+          ) : (
+            initials
+          )}
         </div>
         <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
           <div className="flex items-center gap-2">
@@ -86,8 +151,19 @@ export function ProfilePopover({
         className="w-64 max-w-[calc(100vw-2rem)] rounded-xl border border-[#e5eaee] bg-white p-1.5 text-[#192d4a] shadow-[0_12px_30px_rgba(29,52,74,0.14)]"
       >
         <div className="flex items-center gap-3 px-3 py-3">
-          <div className="flex size-9 items-center justify-center rounded-full bg-[#ffe0e1] text-xs font-bold text-[#e7242b]">
-            {initials}
+          <div className="relative flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#ffe0e1] text-xs font-bold text-[#e7242b]">
+            {profileImageUrl ? (
+              <Image
+                src={profileImageUrl}
+                alt=""
+                fill
+                sizes="36px"
+                unoptimized
+                className="object-cover"
+              />
+            ) : (
+              initials
+            )}
           </div>
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold">{fullName}</p>
@@ -95,9 +171,22 @@ export function ProfilePopover({
           </div>
         </div>
         <DropdownMenuSeparator className="bg-[#edf0f2]" />
-        <DropdownMenuItem className="cursor-pointer gap-3 rounded-lg px-3 py-2.5 text-sm text-[#33465b] focus:bg-[#fff1f1] focus:text-[#e7242b]">
+        <DropdownMenuItem
+          onClick={() => setProfileOpen(true)}
+          className="cursor-pointer gap-3 rounded-lg px-3 py-2.5 text-sm text-[#33465b] focus:bg-[#fff1f1] focus:text-[#e7242b]"
+        >
           <CircleUserRound className="size-4" />
           Account
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => {
+            setTargetsOpen(true)
+            void loadTargets()
+          }}
+          className="cursor-pointer gap-3 rounded-lg px-3 py-2.5 text-sm text-[#33465b] focus:bg-[#fff1f1] focus:text-[#e7242b]"
+        >
+          <Target className="size-4" />
+          My Sales Target Details
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => setOpen(true)}
@@ -127,6 +216,20 @@ export function ProfilePopover({
           {loading ? "Signing out..." : "Sign out"}
         </DropdownMenuItem>
       </DropdownMenuContent>
+      <ProfileSheet
+        key={profileOpen ? "profile-open" : "profile-closed"}
+        open={profileOpen}
+        onOpenChange={setProfileOpen}
+        user={{ id: userId, fullName, username, phone, profileImageUrl, role }}
+      />
+      <MyTargets
+        open={targetsOpen}
+        onOpenChange={setTargetsOpen}
+        records={targetRecords}
+        isLoading={targetsLoading}
+        error={targetsError}
+        onRetry={() => void loadTargets()}
+      />
     </DropdownMenu>
   )
 }

@@ -11,16 +11,13 @@ import {
   Eye,
   ImageOff,
   Package,
-  Search,
   Store,
-  UserRound,
   X,
 } from "lucide-react"
 import { Popover } from "@base-ui/react/popover"
 import type { DateRange } from "react-day-picker"
 
 import { Calendar } from "@/components/ui/calendar"
-import { ParcelsDeliveredInput } from "@/components/custom/orders/parcels-delivered-input"
 import {
   Select,
   SelectContent,
@@ -59,7 +56,6 @@ export type OrderListItem = {
   id: string
   orderId: string
   createdAt: string
-  staffName: string
   shopId: string
   shopName: string
   productsCount: number
@@ -178,7 +174,6 @@ export function OrdersTable({
   orders: OrderListItem[]
   shops: ShopOption[]
 }) {
-  const [search, setSearch] = useState("")
   const [shopFilter, setShopFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState("all")
   const [range, setRange] = useState<DateRange | undefined>()
@@ -190,19 +185,11 @@ export function OrdersTable({
   const endDate = range?.to
 
   const filteredOrders = useMemo(() => {
-    const query = search.trim().toLowerCase()
     return orders.filter((order) => {
       if (shopFilter !== "all" && order.shopId !== shopFilter) return false
       if (
         statusFilter !== "all" &&
         order.status.toLowerCase() !== statusFilter
-      ) {
-        return false
-      }
-      if (
-        query &&
-        !order.orderId.toLowerCase().includes(query) &&
-        !order.staffName.toLowerCase().includes(query)
       ) {
         return false
       }
@@ -227,7 +214,7 @@ export function OrdersTable({
       }
       return true
     })
-  }, [endDate, orders, search, shopFilter, startDate, statusFilter])
+  }, [endDate, orders, shopFilter, startDate, statusFilter])
 
   const selectedShopName =
     shops.find((shop) => shop.id === shopFilter)?.name ?? "All shops"
@@ -238,7 +225,6 @@ export function OrdersTable({
   const hasFilters =
     shopFilter !== "all" ||
     statusFilter !== "all" ||
-    search.trim() !== "" ||
     Boolean(startDate || endDate)
 
   const dateLabel =
@@ -249,7 +235,6 @@ export function OrdersTable({
       : "Select date range"
 
   const clearFilters = () => {
-    setSearch("")
     setShopFilter("all")
     setStatusFilter("all")
     setRange(undefined)
@@ -273,27 +258,7 @@ export function OrdersTable({
         className="rounded-xl border border-red-100 bg-white p-2.5 shadow-sm sm:p-4"
       >
         <div className="grid grid-cols-2 gap-2.5 lg:flex lg:flex-nowrap lg:items-end lg:gap-3">
-          <div className="col-span-2 flex min-w-0 items-end gap-2 lg:contents">
-            <label className="relative min-w-0 flex-1 space-y-1.5 lg:flex-[1.4] lg:basis-0">
-              <span className="text-xs font-semibold text-slate-600">
-                Search
-              </span>
-              <span className="relative block">
-                <Search
-                  aria-hidden="true"
-                  className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-slate-400"
-                />
-                <input
-                  type="search"
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Order ID or staff name"
-                  aria-label="Search orders by order ID or staff name"
-                  className={`h-9 w-full rounded-lg border border-slate-200 bg-white pr-3 pl-9 text-sm text-slate-900 transition placeholder:text-slate-400 focus:border-red-300 lg:h-10 ${focusRing}`}
-                />
-              </span>
-            </label>
-
+          <div className="col-span-2 flex justify-end lg:hidden">
             <button
               type="button"
               aria-label={mobileFiltersOpen ? "Hide filters" : "Show filters"}
@@ -531,9 +496,6 @@ export function OrdersTable({
                       Created
                     </TableHead>
                     <TableHead className="text-xs font-semibold tracking-wide text-red-900 uppercase">
-                      Staff
-                    </TableHead>
-                    <TableHead className="text-xs font-semibold tracking-wide text-red-900 uppercase">
                       Shop
                     </TableHead>
                     <TableHead className="text-right text-xs font-semibold tracking-wide text-red-900 uppercase">
@@ -565,9 +527,6 @@ export function OrdersTable({
                       <TableCell className="whitespace-nowrap text-slate-600">
                         {formatOrderDate(order.createdAt)}
                       </TableCell>
-                      <TableCell className="max-w-40 truncate text-slate-700">
-                        {order.staffName}
-                      </TableCell>
                       <TableCell className="max-w-44 truncate text-slate-700">
                         {order.shopName}
                       </TableCell>
@@ -596,11 +555,8 @@ export function OrdersTable({
                       <TableCell className="text-right font-semibold whitespace-nowrap text-slate-900 tabular-nums">
                         {formatCurrency(order.totalAmount)}
                       </TableCell>
-                      <TableCell className="text-center">
-                        <ParcelsDeliveredInput
-                          orderId={order.id}
-                          initialValue={order.parcelsDelivered}
-                        />
+                      <TableCell className="text-center font-medium text-slate-700 tabular-nums">
+                        {order.parcelsDelivered}
                       </TableCell>
                       <TableCell>
                         <StatusBadge status={order.status} />
@@ -651,13 +607,6 @@ export function OrdersTable({
                         {order.shopName}
                       </span>
                     </p>
-                    <p className="flex items-center gap-2">
-                      <UserRound
-                        aria-hidden="true"
-                        className="size-3.5 shrink-0 text-red-500"
-                      />
-                      <span className="truncate">{order.staffName}</span>
-                    </p>
                   </div>
 
                   <div className="mt-2.5 grid grid-cols-2 gap-2">
@@ -690,10 +639,9 @@ export function OrdersTable({
                       <p className="text-[10px] font-medium text-slate-500">
                         Parcels delivered
                       </p>
-                      <ParcelsDeliveredInput
-                        orderId={order.id}
-                        initialValue={order.parcelsDelivered}
-                      />
+                      <p className="mt-1 text-sm font-semibold text-slate-900 tabular-nums">
+                        {order.parcelsDelivered}
+                      </p>
                     </div>
                   </div>
 

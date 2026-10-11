@@ -48,7 +48,8 @@ export function DashboardHeader({
   const { itemCount } = useCart()
   const pageName = getPageName(pathname)
   const isDashboard = pathname === "/"
-  const isProducts = pathname === "/products"
+  const isCategories = pathname === "/categories" || pathname === "/products"
+  const isBrands = pathname === "/brands"
   const isProductDetails = pathname.startsWith("/products/")
   const isOrderDetails = pathname.startsWith("/orders/")
   const breadcrumbPageName = isOrderDetails
@@ -57,6 +58,7 @@ export function DashboardHeader({
   const selectedCategory = getCategory(
     searchParams.get("category") ?? undefined
   )
+  const selectedBrands = searchParams.get("brands")?.split(",").filter(Boolean)
 
   return (
     <header className="sticky top-0 z-20 flex h-[68px] items-center gap-3 border-b border-[#edf0f2] bg-white/95 px-4 backdrop-blur sm:px-6 lg:px-8">
@@ -77,7 +79,7 @@ export function DashboardHeader({
           {isProductDetails ? (
             <>
               <BreadcrumbItem>
-                <BreadcrumbLink href="/products">Products</BreadcrumbLink>
+                <BreadcrumbLink href="/categories">Categories</BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator />
               <BreadcrumbItem className="min-w-0">
@@ -86,7 +88,23 @@ export function DashboardHeader({
                 </BreadcrumbPage>
               </BreadcrumbItem>
             </>
-          ) : !isProducts ? (
+          ) : isBrands ? (
+            <>
+              <BreadcrumbItem className="min-w-0">
+                <BreadcrumbLink href="/brands">Brands</BreadcrumbLink>
+              </BreadcrumbItem>
+              {selectedBrands?.length ? (
+                <>
+                  <BreadcrumbSeparator />
+                  <BreadcrumbItem className="min-w-0">
+                    <BreadcrumbPage className="truncate">
+                      {selectedBrands.join(", ")}
+                    </BreadcrumbPage>
+                  </BreadcrumbItem>
+                </>
+              ) : null}
+            </>
+          ) : !isCategories ? (
             <>
               <BreadcrumbItem>
                 <BreadcrumbLink href="/">Dashboard</BreadcrumbLink>
@@ -96,9 +114,7 @@ export function DashboardHeader({
                   <BreadcrumbSeparator />
                   <BreadcrumbItem className="min-w-0">
                     <BreadcrumbPage className="truncate">
-                      {isProductDetails
-                        ? (productName ?? "Product")
-                        : breadcrumbPageName}
+                      {breadcrumbPageName}
                     </BreadcrumbPage>
                   </BreadcrumbItem>
                 </>
@@ -107,11 +123,11 @@ export function DashboardHeader({
           ) : (
             <>
               <BreadcrumbItem>
-                <BreadcrumbLink href="/products">Products</BreadcrumbLink>
+                <BreadcrumbLink href="/categories">Categories</BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator />
               <BreadcrumbItem className="min-w-0">
-                <BreadcrumbLink href="/products">Categories</BreadcrumbLink>
+                <BreadcrumbLink href="/categories">Browse</BreadcrumbLink>
               </BreadcrumbItem>
               {selectedCategory ? (
                 <>

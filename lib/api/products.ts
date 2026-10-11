@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server"
+import { createSupabaseAdminClient } from "@/lib/supabase/admin"
 
 export type SupabaseProduct = {
   id: string
@@ -45,7 +46,7 @@ export async function fetchProducts(): Promise<SupabaseProduct[]> {
 export async function fetchProductById(
   id: string
 ): Promise<SupabaseProduct | null> {
-  const supabase = await createSupabaseServerClient()
+  const supabase = createSupabaseAdminClient()
   const { data, error } = await supabase
     .from("products")
     .select(

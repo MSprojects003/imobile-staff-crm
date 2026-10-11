@@ -13,6 +13,8 @@ export type CartVariantDisplay = {
   unitPrice: number
   subtotal: number
   onQuantityChange: (quantity: number) => Promise<void>
+  onRemoveModel: (model: string) => Promise<void>
+  onRemoveColor: (color: string) => Promise<void>
   onRemove: () => Promise<void>
 }
 
@@ -120,10 +122,12 @@ export function CartItemsCard({ item }: { item: CartDisplayItem }) {
                       <button
                         key={`model-${model}`}
                         type="button"
-                        aria-label={`Remove ${optionLabel} from ${item.name}`}
-                        title={`Remove ${optionLabel}`}
+                        aria-label={`Remove model ${model} from ${item.name}`}
+                        title={`Remove model ${model}`}
                         disabled={isBusy}
-                        onClick={() => void runAction(variant.onRemove)}
+                        onClick={() =>
+                          void runAction(() => variant.onRemoveModel(model))
+                        }
                         className={`inline-flex items-center gap-1.5 border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-700 transition hover:border-red-200 hover:bg-red-50 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-40 ${focusRing}`}
                       >
                         Model: {model}
@@ -136,10 +140,12 @@ export function CartItemsCard({ item }: { item: CartDisplayItem }) {
                       <button
                         key={`color-${color}`}
                         type="button"
-                        aria-label={`Remove ${optionLabel} from ${item.name}`}
-                        title={`Remove ${optionLabel}`}
+                        aria-label={`Remove color ${getColorName(color)} from ${item.name}`}
+                        title={`Remove color ${getColorName(color)}`}
                         disabled={isBusy}
-                        onClick={() => void runAction(variant.onRemove)}
+                        onClick={() =>
+                          void runAction(() => variant.onRemoveColor(color))
+                        }
                         className={`inline-flex items-center gap-1.5 border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-700 transition hover:border-red-200 hover:bg-red-50 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-40 ${focusRing}`}
                       >
                         Color: {getColorName(color)}

@@ -90,6 +90,7 @@ export default async function OrderDetailsPage({
     (staff) => staff.id
   )
   if (staffIds.length === 0) notFound()
+  const orderOwnerIds = [...new Set([...staffIds, user.id])]
 
   const { data: orderData, error: orderError } = await adminClient
     .from("orders")
@@ -97,7 +98,7 @@ export default async function OrderDetailsPage({
       "id, order_id, user_id, shop_id, products_count, estimated_total, deducted_amount, refund_amount, is_negotiable_price, negotiable_reason, status, created_at, parcels_delivered"
     )
     .eq("id", id)
-    .in("user_id", staffIds)
+    .in("user_id", orderOwnerIds)
     .maybeSingle()
 
   if (orderError) {

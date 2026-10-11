@@ -14,7 +14,7 @@ export function CategoryCard({ category }: { category: ProductCategory }) {
   return (
     <article className="min-w-0 lg:w-[150px] lg:shrink-0">
       <Link
-        href={`/products?category=${encodeURIComponent(category.name)}`}
+        href={`/categories?category=${encodeURIComponent(category.name)}`}
         aria-label={`View ${category.name}`}
       >
         <div className="group relative aspect-square overflow-hidden rounded-xl lg:rounded-none">
@@ -22,6 +22,7 @@ export function CategoryCard({ category }: { category: ProductCategory }) {
             src={category.image}
             alt={category.name}
             fill
+            unoptimized
             sizes="(min-width: 1024px) 150px, (min-width: 640px) 30vw, 45vw"
             className="object-cover transition duration-500 group-hover:scale-105 group-hover:grayscale"
           />

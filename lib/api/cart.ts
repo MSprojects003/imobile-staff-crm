@@ -355,3 +355,23 @@ export async function removeCartItem(supabase: SupabaseClient, id: string) {
     throw new Error(getCartErrorMessage(error, "Removing cart item failed"))
   }
 }
+
+export async function removeCartSelection(
+  supabase: SupabaseClient,
+  id: string,
+  selectionType: "model" | "color",
+  value: string
+) {
+  const { error } = await runWithSessionRefresh(supabase, async () =>
+    await supabase.rpc("remove_cart_item_selection", {
+      p_cart_item_id: id,
+      p_selection_type: selectionType,
+      p_selection_value: value,
+    })
+  )
+  if (error) {
+    throw new Error(
+      getCartErrorMessage(error, "Removing cart selection failed")
+    )
+  }
+}

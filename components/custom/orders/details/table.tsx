@@ -14,7 +14,6 @@ import {
 } from "lucide-react"
 import { format } from "date-fns"
 
-import { SubOrderItemStatusSelect } from "@/components/custom/orders/details/status-select"
 import { useSidebar } from "@/components/ui/sidebar"
 
 export type OrderDetailVariant = {
@@ -389,18 +388,11 @@ export function OrderItemsTable({ order }: { order: OrderDetailData }) {
                               </span>
                             )}
                             <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2">
-                              {variant.id ? (
-                                <SubOrderItemStatusSelect
-                                  itemId={variant.id}
-                                  initialStatus={variant.status}
-                                />
-                              ) : (
-                                <span
-                                  className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${getItemStatusClass(variant.status)}`}
-                                >
-                                  {formatStatus(variant.status)}
-                                </span>
-                              )}
+                              <span
+                                className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${getItemStatusClass(variant.status)}`}
+                              >
+                                {formatStatus(variant.status)}
+                              </span>
                               <span className="text-xs text-slate-500">
                                 Qty{" "}
                                 <span className="font-semibold text-slate-700 tabular-nums">

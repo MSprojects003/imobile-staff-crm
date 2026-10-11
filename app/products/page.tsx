@@ -2,6 +2,7 @@ import { redirect } from "next/navigation"
 import { Suspense } from "react"
 
 import { CategoryPage } from "@/components/custom/products/category/category-page"
+import { BrandPage } from "@/components/custom/products/brand/brand-page"
 import {
   ProductList,
   ProductListSkeleton,
@@ -85,8 +86,10 @@ async function ProductPagination({
 
 async function ProductContent({
   searchParams,
+  browseBrands,
 }: {
   searchParams: Promise<ProductSearchParams>
+  browseBrands: boolean
 }) {
   const products = await fetchProducts()
   const {
@@ -115,6 +118,8 @@ async function ProductContent({
     activeCategoryNames.length > 2
       ? `${activeCategoryNames.slice(0, 2).join(", ")} & ${activeCategoryNames.length - 2} more`
       : activeCategoryNames.join(", ")
+  const productHeading =
+    selectedBrands.length === 1 ? `${selectedBrands[0]} Products` : "Products"
   const visibleProducts = products.filter(
     (product) =>
       (categoryIds.length === 0 ||
@@ -159,7 +164,7 @@ async function ProductContent({
             </div>
           ) : null}
           <h1 className="mt-2 truncate text-2xl leading-none font-semibold tracking-[-0.03em] text-[#171717] sm:text-4xl lg:text-3xl">
-            Products
+            {productHeading}
           </h1>
         </div>
         <ProductFilters
@@ -171,7 +176,7 @@ async function ProductContent({
       <ProductList products={paginatedProducts} />
     </section>
   ) : (
-    <CategoryPage />
+    browseBrands ? <BrandPage /> : <CategoryPage />
   )
 }
 
@@ -205,8 +210,10 @@ function toProductCardData(product: SupabaseProduct) {
 
 export default async function ProductsPage({
   searchParams,
+  browseBrands = false,
 }: {
   searchParams: Promise<ProductSearchParams>
+  browseBrands?: boolean
 }) {
   const user = await getCurrentUser()
 
@@ -222,7 +229,10 @@ export default async function ProductsPage({
       }
     >
       <Suspense fallback={<ProductListSkeleton />}>
-        <ProductContent searchParams={searchParams} />
+        <ProductContent
+          searchParams={searchParams}
+          browseBrands={browseBrands}
+        />
       </Suspense>
     </AppSidebar>
   )

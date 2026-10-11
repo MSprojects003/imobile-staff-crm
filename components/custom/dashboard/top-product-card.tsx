@@ -6,10 +6,17 @@ export type TopProduct = {
   id: string
   name: string
   sold: number
+  amount: number
   image: StaticImageData | string
 }
 
-export function TopProductCard({ product }: { product: TopProduct }) {
+export function TopProductCard({
+  product,
+  formatSales,
+}: {
+  product: TopProduct
+  formatSales: (value: number) => string
+}) {
   return (
     <Card
       size="sm"
@@ -31,9 +38,14 @@ export function TopProductCard({ product }: { product: TopProduct }) {
         >
           {product.name}
         </p>
-        <p className="shrink-0 text-xs font-medium text-[#8795a3]">
-          {product.sold} sold
-        </p>
+        <div className="shrink-0 text-right">
+          <p className="text-xs font-semibold tabular-nums text-[#526274]">
+            {formatSales(product.amount)}
+          </p>
+          <p className="mt-0.5 text-[10px] font-medium text-[#8795a3]">
+            {product.sold.toLocaleString("en-LK")} sold
+          </p>
+        </div>
       </CardContent>
     </Card>
   )

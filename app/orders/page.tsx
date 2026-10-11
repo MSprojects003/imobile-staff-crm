@@ -78,6 +78,7 @@ export default async function OrdersPage() {
 
   const staffRows = (staffData ?? []) as { id: string; user_id: string }[]
   const staffIds = staffRows.map((staff) => staff.id)
+  const orderOwnerIds = [...new Set([...staffIds, user.id])]
   let orderRows: OrderRow[] = []
 
   if (staffIds.length > 0) {
@@ -86,7 +87,7 @@ export default async function OrdersPage() {
       .select(
         "id, order_id, user_id, shop_id, estimated_total, products_count, deducted_amount, refund_amount, status, created_at, parcels_delivered"
       )
-      .in("user_id", staffIds)
+      .in("user_id", orderOwnerIds)
       .order("created_at", { ascending: false })
 
     if (ordersError) {
@@ -224,7 +225,6 @@ export default async function OrdersPage() {
     id: order.id,
     orderId: order.order_id,
     createdAt: order.created_at,
-    staffName: user.full_name,
     shopId: order.shop_id,
     shopName: shopNameById.get(order.shop_id) ?? "Shop unavailable",
     productsCount: toNumber(order.products_count),

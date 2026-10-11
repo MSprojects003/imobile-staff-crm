@@ -59,6 +59,7 @@ export function LeftSection({
     error: cartError,
     updateQuantity,
     removeItem,
+    removeSelection,
     clearCart,
   } = useCart()
   const [searchQuery, setSearchQuery] = React.useState("")
@@ -96,6 +97,10 @@ export function LeftSection({
       subtotal: item.subtotal,
       onQuantityChange: (quantity: number) =>
         runCartAction(() => updateQuantity(item.id, quantity)),
+      onRemoveModel: (model: string) =>
+        runCartAction(() => removeSelection(item.id, "model", model)),
+      onRemoveColor: (color: string) =>
+        runCartAction(() => removeSelection(item.id, "color", color)),
       onRemove: () => runCartAction(() => removeItem(item.id)),
     }
 
@@ -133,7 +138,7 @@ export function LeftSection({
         className="min-w-0 xl:flex xl:h-full xl:min-h-0 xl:flex-col"
       >
         <Link
-          href="/products"
+          href="/categories"
           className={`inline-flex shrink-0 items-center gap-2 self-start rounded text-sm font-medium text-red-700 transition hover:text-red-900 ${focusRing}`}
         >
           <ArrowLeft aria-hidden="true" className="size-4" />
@@ -231,7 +236,7 @@ export function LeftSection({
               checkout.
             </p>
             <Link
-              href="/products"
+              href="/categories"
               className={`mt-6 inline-flex h-11 items-center rounded-lg bg-red-600 px-6 text-sm font-semibold text-white transition hover:bg-red-700 active:bg-red-800 ${focusRing}`}
             >
               Browse products

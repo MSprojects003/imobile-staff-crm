@@ -14,6 +14,13 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "odotvxrmrnqgrbrxogqh.supabase.co",
         port: "",
+        pathname: "/storage/v1/object/public/brands/**",
+        search: "",
+      },
+      {
+        protocol: "https",
+        hostname: "odotvxrmrnqgrbrxogqh.supabase.co",
+        port: "",
         pathname: "/storage/v1/object/public/products/**",
         search: "",
       },

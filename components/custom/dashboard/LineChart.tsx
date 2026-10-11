@@ -26,45 +26,8 @@ import {
 
 type Range = "year" | "six-months" | "month" | "week"
 
-const chartData: Record<Range, { label: string; sales: number }[]> = {
-  year: [
-    { label: "Jan", sales: 42500 },
-    { label: "Feb", sales: 51800 },
-    { label: "Mar", sales: 47600 },
-    { label: "Apr", sales: 63400 },
-    { label: "May", sales: 72800 },
-    { label: "Jun", sales: 68100 },
-    { label: "Jul", sales: 79400 },
-    { label: "Aug", sales: 75600 },
-    { label: "Sep", sales: 83200 },
-    { label: "Oct", sales: 84620 },
-    { label: "Nov", sales: 91500 },
-    { label: "Dec", sales: 98800 },
-  ],
-  "six-months": [
-    { label: "May", sales: 72800 },
-    { label: "Jun", sales: 68100 },
-    { label: "Jul", sales: 79400 },
-    { label: "Aug", sales: 75600 },
-    { label: "Sep", sales: 83200 },
-    { label: "Oct", sales: 84620 },
-  ],
-  month: [
-    { label: "Week 1", sales: 18600 },
-    { label: "Week 2", sales: 22400 },
-    { label: "Week 3", sales: 19800 },
-    { label: "Week 4", sales: 23820 },
-  ],
-  week: [
-    { label: "Mon", sales: 9800 },
-    { label: "Tue", sales: 12400 },
-    { label: "Wed", sales: 10800 },
-    { label: "Thu", sales: 14200 },
-    { label: "Fri", sales: 11600 },
-    { label: "Sat", sales: 13820 },
-    { label: "Sun", sales: 12000 },
-  ],
-}
+type SalesOrder = { createdAt: string; total: number }
+type ChartPoint = { label: string; sales: number }
 
 const rangeLabels: Record<Range, string> = {
   year: "This year",
@@ -84,10 +47,76 @@ function formatSales(value: number) {
   return `Rs. ${value.toLocaleString("en-IN")}`
 }
 
-export function LineChart() {
+function buildChartData(orders: SalesOrder[], range: Range): ChartPoint[] {
+  const now = new Date()
+  const addSales = (start: Date, end: Date) =>
+    orders.reduce((total, order) => {
+      const createdAt = new Date(order.createdAt)
+      return createdAt >= start && createdAt < end ? total + order.total : total
+    }, 0)
+
+  if (range === "year") {
+    return Array.from({ length: 12 }, (_, month) => ({
+      label: new Intl.DateTimeFormat("en", { month: "short" }).format(
+        new Date(now.getFullYear(), month, 1)
+      ),
+      sales: addSales(
+        new Date(now.getFullYear(), month, 1),
+        new Date(now.getFullYear(), month + 1, 1)
+      ),
+    }))
+  }
+
+  if (range === "six-months") {
+    return Array.from({ length: 6 }, (_, index) => {
+      const month = now.getMonth() - 5 + index
+      const start = new Date(now.getFullYear(), month, 1)
+      return {
+        label: new Intl.DateTimeFormat("en", { month: "short" }).format(start),
+        sales: addSales(start, new Date(start.getFullYear(), start.getMonth() + 1, 1)),
+      }
+    })
+  }
+
+  if (range === "month") {
+    const daysInMonth = new Date(
+      now.getFullYear(),
+      now.getMonth() + 1,
+      0
+    ).getDate()
+    return Array.from({ length: 4 }, (_, index) => {
+      const startDay = Math.floor((index * daysInMonth) / 4)
+      const endDay = Math.floor(((index + 1) * daysInMonth) / 4)
+      return {
+        label: `Week ${index + 1}`,
+        sales: addSales(
+          new Date(now.getFullYear(), now.getMonth(), startDay + 1),
+          new Date(now.getFullYear(), now.getMonth(), endDay + 1)
+        ),
+      }
+    })
+  }
+
+  const weekStart = new Date(now)
+  weekStart.setDate(now.getDate() - ((now.getDay() + 6) % 7))
+  weekStart.setHours(0, 0, 0, 0)
+  return Array.from({ length: 7 }, (_, index) => {
+    const start = new Date(weekStart)
+    start.setDate(weekStart.getDate() + index)
+    const end = new Date(start)
+    end.setDate(start.getDate() + 1)
+    return {
+      label: new Intl.DateTimeFormat("en", { weekday: "short" }).format(start),
+      sales: addSales(start, end),
+    }
+  })
+}
+
+export function LineChart({ orders }: { orders: SalesOrder[] }) {
   const [range, setRange] = React.useState<Range>("six-months")
-  const data = chartData[range]
-  const trendIsPositive = data[data.length - 1].sales >= data[0].sales
+  const data = buildChartData(orders, range)
+  const trendIsPositive =
+    data[data.length - 1].sales >= data[0].sales
   const areaGradientId = `sales-area-gradient-${range}`
 
   return (

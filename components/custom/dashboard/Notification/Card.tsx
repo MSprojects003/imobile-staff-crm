@@ -11,12 +11,19 @@ function getLinkTarget(link: string | null) {
   const trimmedLink = link.trim()
 
   if (trimmedLink.startsWith("/") && !trimmedLink.startsWith("//")) {
-    return { href: trimmedLink, external: false }
+    return {
+      href: trimmedLink.replace(/^\/dashboard\/products(?=\/|[?#]|$)/, "/products"),
+      external: false,
+    }
   }
 
   try {
     const url = new URL(trimmedLink)
     if (url.protocol === "https:" || url.protocol === "http:") {
+      url.pathname = url.pathname.replace(
+        /^\/dashboard\/products(?=\/|$)/,
+        "/products"
+      )
       return { href: url.toString(), external: true }
     }
   } catch {

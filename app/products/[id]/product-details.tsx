@@ -129,9 +129,14 @@ function getTierQuantity(
 function getUniqueModels(product: SupabaseProduct): string[] {
   return [
     ...new Set(
-      [product.model, product.model_number].filter((m): m is string =>
-        Boolean(m)
-      )
+      [product.model, product.model_number]
+        .filter((model): model is string => Boolean(model))
+        .flatMap((model) =>
+          model
+            .split(",")
+            .map((part) => part.trim())
+            .filter(Boolean)
+        )
     ),
   ]
 }
@@ -447,12 +452,11 @@ function ModelSelector({
   return (
     <div className="mt-6" role="group" aria-labelledby="model-label">
       <p id="model-label" className="text-sm font-semibold text-[#192d4a]">
-        Model:{" "}
-        <span className="font-normal text-[#e7242b]">
-          {selected.join(", ")}
-        </span>
+        Model number
       </p>
-      <p className="mt-1 text-xs text-[#8795a3]">Select one or more models.</p>
+      <p className="mt-1 text-xs text-[#8795a3]">
+        Select one or more model numbers.
+      </p>
       <div className="mt-3 flex flex-wrap gap-2">
         {models.map((model) => {
           const isSelected = selected.includes(model)
@@ -480,12 +484,10 @@ function ModelSelector({
 function ColorSelector({
   colors,
   selected,
-  singleOnly,
   onToggle,
 }: {
   colors: string[]
   selected: string[]
-  singleOnly: boolean
   onToggle: (color: string) => void
 }) {
   return (
@@ -497,9 +499,8 @@ function ColorSelector({
         </span>
       </p>
       <p className="mt-1 text-xs text-[#8795a3]">
-        {singleOnly
-          ? "Multiple models selected: choose 1 color."
-          : "Single model selected: choose one or more colors."}
+        Select one or more colors. Each selected color is paired with every
+        selected model.
       </p>
       <div className="mt-3 flex flex-wrap gap-3">
         {colors.map((color) => {
@@ -648,9 +649,6 @@ export function ProductDetails({
     []
   )
 
-  // Rule: multiple models -> only 1 color. Single model -> multiple colors.
-  const isMultiModel = selectedModels.length > 1
-
   const handleToggleModel = (model: string) => {
     const exists = selectedModels.includes(model)
 
@@ -662,19 +660,9 @@ export function ProductDetails({
       : [...selectedModels, model]
 
     setSelectedModels(nextModels)
-
-    // Entering multi-model mode: trim colors down to a single one.
-    if (nextModels.length > 1 && selectedColors.length > 1) {
-      setSelectedColors(selectedColors.slice(0, 1))
-    }
   }
 
   const handleToggleColor = (color: string) => {
-    if (isMultiModel) {
-      setSelectedColors([color])
-      return
-    }
-
     const exists = selectedColors.includes(color)
     // Always keep at least one color selected.
     if (exists && selectedColors.length === 1) return
@@ -770,11 +758,7 @@ export function ProductDetails({
               {product.name}
             </h1>
 
-            <div className="mt-4 grid grid-cols-2 gap-3 border-y border-[#edf0f2] py-4 sm:grid-cols-3">
-              <MetaItem
-                label="Model"
-                value={selectedModels.join(", ") || "Not specified"}
-              />
+            <div className="mt-4 grid grid-cols-2 gap-3 border-y border-[#edf0f2] py-4 sm:grid-cols-2">
               <MetaItem
                 label="Year"
                 value={product.manufactured_year ?? "Not specified"}
@@ -790,10 +774,6 @@ export function ProductDetails({
               discountPercent={productDiscountPercent}
             />
 
-            <p className="mt-5 text-base leading-7 text-[#657487]">
-              {product.description}
-            </p>
-
             {modelOptions.length > 0 && (
               <ModelSelector
                 models={modelOptions}
@@ -806,7 +786,6 @@ export function ProductDetails({
               <ColorSelector
                 colors={product.colors}
                 selected={selectedColors}
-                singleOnly={isMultiModel}
                 onToggle={handleToggleColor}
               />
             )}

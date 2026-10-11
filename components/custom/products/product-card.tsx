@@ -5,7 +5,6 @@ import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 
 import type { Product } from "./product-data"
-import { ProductInfoTabs } from "./product-info-tabs"
 
 const IMAGE_SIZES =
   "(min-width: 1280px) 220px, (min-width: 640px) 30vw, 45vw"
@@ -87,11 +86,6 @@ export function ProductCard({ product }: { product: Product }) {
           </div>
         </CardContent>
       </Link>
-
-      <ProductInfoTabs
-        description={product.description}
-        specifications={product.specifications}
-      />
     </Card>
   )
 }

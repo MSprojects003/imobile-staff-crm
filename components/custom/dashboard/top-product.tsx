@@ -15,6 +15,15 @@ import { TopProductCard, type TopProduct } from "./top-product-card"
 
 type ProductRange = "week" | "month" | "six-months" | "year"
 
+export type TopProductSale = {
+  productId: string
+  name: string
+  image: string | null
+  createdAt: string
+  amount: number
+  quantity: number
+}
+
 const rangeLabels: Record<ProductRange, string> = {
   week: "This week",
   month: "This month",
@@ -22,36 +31,68 @@ const rangeLabels: Record<ProductRange, string> = {
   year: "This year",
 }
 
-const productsByRange: Record<ProductRange, TopProduct[]> = {
-  week: [
-    { id: "iphone-15", name: "iPhone 15", sold: 45, image: phonesBanner },
-    { id: "samsung-a54", name: "Samsung Galaxy A54", sold: 32, image: phonesBanner },
-    { id: "redmi-note-13", name: "Redmi Note 13", sold: 28, image: phonesBanner },
-    { id: "oneplus-nord-2", name: "OnePlus Nord 2", sold: 19, image: phonesBanner },
-  ],
-  month: [
-    { id: "iphone-15", name: "iPhone 15", sold: 182, image: phonesBanner },
-    { id: "samsung-a54", name: "Samsung Galaxy A54", sold: 146, image: phonesBanner },
-    { id: "redmi-note-13", name: "Redmi Note 13", sold: 124, image: phonesBanner },
-    { id: "oneplus-nord-2", name: "OnePlus Nord 2", sold: 98, image: phonesBanner },
-  ],
-  "six-months": [
-    { id: "iphone-15", name: "iPhone 15", sold: 864, image: phonesBanner },
-    { id: "samsung-a54", name: "Samsung Galaxy A54", sold: 731, image: phonesBanner },
-    { id: "redmi-note-13", name: "Redmi Note 13", sold: 645, image: phonesBanner },
-    { id: "oneplus-nord-2", name: "OnePlus Nord 2", sold: 528, image: phonesBanner },
-  ],
-  year: [
-    { id: "iphone-15", name: "iPhone 15", sold: 1724, image: phonesBanner },
-    { id: "samsung-a54", name: "Samsung Galaxy A54", sold: 1489, image: phonesBanner },
-    { id: "redmi-note-13", name: "Redmi Note 13", sold: 1298, image: phonesBanner },
-    { id: "oneplus-nord-2", name: "OnePlus Nord 2", sold: 1106, image: phonesBanner },
-  ],
+function getRangeStart(range: ProductRange, now: Date) {
+  if (range === "year") return new Date(now.getFullYear(), 0, 1)
+  if (range === "six-months") {
+    return new Date(now.getFullYear(), now.getMonth() - 5, 1)
+  }
+  if (range === "month") return new Date(now.getFullYear(), now.getMonth(), 1)
+
+  const start = new Date(now)
+  start.setDate(now.getDate() - ((now.getDay() + 6) % 7))
+  start.setHours(0, 0, 0, 0)
+  return start
 }
 
-export function TopProduct() {
+function formatSales(value: number) {
+  return `Rs. ${value.toLocaleString("en-LK", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  })}`
+}
+
+export function TopProduct({ sales }: { sales: TopProductSale[] }) {
   const [range, setRange] = React.useState<ProductRange>("week")
-  const products = productsByRange[range]
+  const products = React.useMemo(() => {
+    const now = new Date()
+    const start = getRangeStart(range, now)
+    const salesByProduct = new Map<
+      string,
+      Omit<TopProduct, "image"> & { image: string | null }
+    >()
+
+    for (const sale of sales) {
+      const createdAt = new Date(sale.createdAt)
+      if (createdAt < start || createdAt > now) continue
+
+      const product =
+        salesByProduct.get(sale.productId) ??
+        {
+          id: sale.productId,
+          name: sale.name,
+          image: sale.image,
+          sold: 0,
+          amount: 0,
+        }
+      product.sold += sale.quantity
+      product.amount += sale.amount
+      salesByProduct.set(sale.productId, product)
+    }
+
+    return [...salesByProduct.values()]
+      .filter((product) => product.amount > 0)
+      .sort(
+        (first, second) =>
+          second.amount - first.amount ||
+          second.sold - first.sold ||
+          first.name.localeCompare(second.name)
+      )
+      .slice(0, 5)
+      .map((product) => ({
+        ...product,
+        image: product.image || phonesBanner,
+      }))
+  }, [range, sales])
 
   return (
     <section className="mt-5 w-full lg:w-[30%]" aria-labelledby="top-products-title">
@@ -89,9 +130,19 @@ export function TopProduct() {
           </Select>
         </CardHeader>
         <CardContent className="px-4 py-0">
-          {products.map((product) => (
-            <TopProductCard key={product.id} product={product} />
-          ))}
+          {products.length > 0 ? (
+            products.map((product) => (
+              <TopProductCard
+                key={product.id}
+                product={product}
+                formatSales={formatSales}
+              />
+            ))
+          ) : (
+            <p className="py-8 text-center text-xs text-[#8795a3]">
+              No delivered product sales in this period.
+            </p>
+          )}
         </CardContent>
       </Card>
     </section>

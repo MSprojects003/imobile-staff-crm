@@ -6,6 +6,7 @@ import {
   addCartItem,
   fetchCartItems,
   repriceCartItems,
+  removeCartSelection,
   removeCartItem,
   updateCartItemQuantity,
   type CartItem,
@@ -27,6 +28,11 @@ type CartContextValue = {
   error: string | null
   addItem: (item: AddCartItemInput) => Promise<void>
   updateQuantity: (id: string, quantity: number) => Promise<void>
+  removeSelection: (
+    id: string,
+    selectionType: "model" | "color",
+    value: string
+  ) => Promise<void>
   removeItem: (id: string) => Promise<void>
   clearCart: () => void
 }
@@ -305,6 +311,22 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     [items, supabase]
   )
 
+  const removeSelection = React.useCallback(
+    async (
+      id: string,
+      selectionType: "model" | "color",
+      value: string
+    ) => {
+      if (!value.trim()) {
+        throw new Error("Select a valid model or color to remove.")
+      }
+
+      await removeCartSelection(supabase, id, selectionType, value)
+      await loadCart()
+    },
+    [loadCart, supabase]
+  )
+
   const clearCart = React.useCallback(() => {
     setItems([])
     setError(null)
@@ -318,10 +340,20 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       error,
       addItem,
       updateQuantity,
+      removeSelection,
       removeItem,
       clearCart,
     }),
-    [items, isLoading, error, addItem, updateQuantity, removeItem, clearCart]
+    [
+      items,
+      isLoading,
+      error,
+      addItem,
+      updateQuantity,
+      removeSelection,
+      removeItem,
+      clearCart,
+    ]
   )
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>
